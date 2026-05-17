@@ -4625,7 +4625,7 @@ function renderQuestion(){
     const text = q.choices[k] || '';
     if(!text) continue;
     let cls = 'choice';
-    let onclick = `pickChoice('${k}')`;
+    let onclick = `QuizM.pickChoice('${k}')`;
     if(state.graded){
       cls += ' disabled';
       const inCorrect = q.correct.includes(k);
