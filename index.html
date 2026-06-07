@@ -580,6 +580,15 @@ header .ctrl{display:flex; gap:6px; align-items:center}
             '<span class="go">開始 →</span>' +
           '</div>' +
         '</button>' +
+        '<button class="hub-mode-card video" onclick="window.__hubEnterVideo()" style="border-left:6px solid var(--accent)">' +
+          '<div class="icon">🎬</div>' +
+          '<div class="body">' +
+            '<div class="ttl">動画講義（全18回）</div>' +
+            '<div class="desc">JSH専門医試験対策Web講座の講義動画。各回のタイトル・講師・内容（高血圧動画.pdf準拠）つき。視聴の続き・受講済みを保存。</div>' +
+            '<div class="meta">講義1〜18 ・ タップで視聴ページへ</div>' +
+            '<span class="go">開く →</span>' +
+          '</div>' +
+        '</button>' +
       '</div>' +
       '<div class="card">' +
         '<h3 style="margin:0 0 10px">使い方</h3>' +
@@ -598,6 +607,7 @@ header .ctrl{display:flex; gap:6px; align-items:center}
   window.__hubEnterOral = enterOral;
   window.__hubEnterQuiz = enterQuiz;
   window.__hubEnterExam = enterExam;
+  window.__hubEnterVideo = function(){ location.href = '動画.html'; };
   window.__hubGoHome = goHome;
 
   showHub();

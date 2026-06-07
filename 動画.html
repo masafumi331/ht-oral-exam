@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>動画講義 | 高血圧専門医試験 対策アプリ</title>
+<style>
+:root{
+  --bg:#f5f5f0; --fg:#1a1a1a; --card:#ffffff; --accent:#2a5d8f; --accent2:#5a8fb8;
+  --muted:#6b7280; --border:#e2e2dc; --good:#2e9e5b; --gold:#b8860b;
+}
+body.dark{
+  --bg:#1a1d22; --fg:#e8e8e8; --card:#262a30; --accent:#7eb8e0; --accent2:#5a8fb8;
+  --muted:#9aa3ad; --border:#3a3f47; --good:#4ec27e; --gold:#d4af57;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--fg);
+  font-family:"Meiryo","Hiragino Kaku Gothic ProN",Arial,sans-serif; line-height:1.7}
+header{position:sticky; top:0; z-index:20; background:var(--card);
+  border-bottom:1px solid var(--border); padding:10px 16px; display:flex;
+  align-items:center; gap:10px}
+header h1{font-size:18px; margin:0; color:var(--accent); flex:1; font-weight:700}
+.iconbtn{background:var(--card); border:1px solid var(--border); color:var(--fg);
+  border-radius:8px; padding:6px 10px; font-size:14px; cursor:pointer}
+.iconbtn:hover{border-color:var(--accent)}
+main{max-width:960px; margin:0 auto; padding:16px}
+.card{background:var(--card); border:1px solid var(--border); border-radius:14px;
+  padding:18px 20px; margin-bottom:16px}
+.intro h2{margin:0 0 8px; font-size:22px}
+.intro p{margin:4px 0; color:var(--muted); font-size:14px}
+.player-wrap{position:sticky; top:54px; z-index:10; margin-bottom:16px; display:none}
+.player-wrap.active{display:block}
+.player-card{background:#000; border-radius:12px; overflow:hidden;
+  border:1px solid var(--border)}
+.player-head{background:var(--card); padding:10px 14px; display:flex;
+  align-items:center; gap:10px; border-bottom:1px solid var(--border)}
+.player-head .pn{background:var(--accent); color:#fff; border-radius:6px;
+  padding:2px 9px; font-size:13px; font-weight:700; white-space:nowrap}
+.player-head .pt{font-weight:700; font-size:15px; flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+video{width:100%; max-height:62vh; display:block; background:#000}
+.player-err{display:none; background:#fff3cd; color:#664d03; padding:12px 14px;
+  font-size:13px; line-height:1.6; border-top:1px solid var(--border)}
+body.dark .player-err{background:#3a2f1a; color:#f0d98a}
+.player-err.show{display:block}
+.search{width:100%; padding:11px 14px; border:2px solid var(--border);
+  border-radius:10px; background:var(--card); color:var(--fg); font-size:15px;
+  margin-bottom:14px}
+.lec{border:2px solid var(--border); border-radius:12px; padding:14px 16px;
+  margin-bottom:12px; transition:border-color .15s}
+.lec:hover{border-color:var(--accent2)}
+.lec.playing{border-color:var(--accent); box-shadow:0 0 0 2px rgba(42,93,143,.15)}
+.lec.done{border-color:var(--good)}
+.lec-head{display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap}
+.lec-no{background:var(--accent); color:#fff; border-radius:8px; padding:3px 10px;
+  font-size:14px; font-weight:700; white-space:nowrap}
+.lec.done .lec-no{background:var(--good)}
+.lec-main{flex:1; min-width:200px}
+.lec-title{font-size:18px; font-weight:700; margin:0 0 2px}
+.lec-lect{font-size:13px; color:var(--muted)}
+.lec-actions{display:flex; gap:8px; align-items:center}
+.btn{background:var(--accent); color:#fff; border:none; border-radius:9px;
+  padding:9px 16px; font-size:15px; font-weight:600; cursor:pointer; white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn.sec{background:var(--card); color:var(--fg); border:2px solid var(--border)}
+.chk{font-size:13px; color:var(--muted); cursor:pointer; user-select:none;
+  display:flex; align-items:center; gap:5px; white-space:nowrap}
+.chk input{width:17px; height:17px; cursor:pointer}
+.topics{margin:10px 0 0; padding:0; list-style:none; display:flex;
+  flex-wrap:wrap; gap:6px}
+.topics li{background:var(--bg); border:1px solid var(--border); border-radius:999px;
+  padding:3px 11px; font-size:13px; color:var(--fg)}
+.resume-note{font-size:12px; color:var(--accent); margin-top:6px; font-weight:600}
+.prog{height:5px; background:var(--border); border-radius:3px; margin-top:10px;
+  overflow:hidden}
+.prog>span{display:block; height:100%; background:var(--accent2); width:0}
+.lec.done .prog>span{background:var(--good)}
+.modal{position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
+  align-items:center; justify-content:center; z-index:50; padding:16px}
+.modal.show{display:flex}
+.modal .mbody{background:var(--card); border-radius:14px; padding:22px;
+  max-width:520px; width:100%; max-height:85vh; overflow:auto}
+.modal h3{margin:0 0 12px}
+.modal label{display:block; font-size:14px; margin:12px 0 4px; font-weight:600}
+.modal input[type=text]{width:100%; padding:10px; border:2px solid var(--border);
+  border-radius:8px; background:var(--bg); color:var(--fg); font-size:14px}
+.modal .hint{font-size:13px; color:var(--muted); line-height:1.6; margin:6px 0}
+.modal .mrow{display:flex; gap:8px; margin-top:16px}
+.summary-bar{font-size:14px; color:var(--muted); margin-bottom:12px}
+code{background:var(--bg); padding:1px 5px; border-radius:4px; font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <button class="iconbtn" onclick="goApp()">← アプリへ</button>
+  <h1>🎬 動画講義（全18回）</h1>
+  <button class="iconbtn" onclick="openSettings()">⚙️</button>
+  <button class="iconbtn" onclick="toggleTheme()">配色</button>
+</header>
+
+<main>
+  <div class="player-wrap" id="playerWrap">
+    <div class="player-card">
+      <div class="player-head">
+        <span class="pn" id="pNo">講義</span>
+        <span class="pt" id="pTitle"></span>
+        <button class="iconbtn" onclick="closePlayer()">✕</button>
+      </div>
+      <video id="video" controls playsinline preload="metadata"></video>
+      <div class="player-err" id="pErr"></div>
+    </div>
+  </div>
+
+  <div class="card intro">
+    <h2>高血圧専門医試験 受験者のためのWeb講座</h2>
+    <p>JSH（日本高血圧学会）専門医試験対策eラーニング講座の全18講義。各講義のタイトル・講師・内容は <code>高血圧動画.pdf</code> の講義一覧に基づいています。</p>
+    <p id="introStat"></p>
+  </div>
+
+  <input class="search" id="search" placeholder="🔍 講義名・講師・キーワードで絞り込み" oninput="renderList()">
+  <div class="summary-bar" id="summary"></div>
+  <div id="list"></div>
+</main>
+
+<div class="modal" id="settingsModal">
+  <div class="mbody">
+    <h3>⚙️ 動画ソースの設定</h3>
+    <p class="hint">動画ファイル本体は容量が大きいためサイトには含まれていません。動画の置き場所（ベースURL／パス）を指定してください。設定はこの端末のブラウザに保存されます。</p>
+    <label>動画フォルダのベースURL／パス</label>
+    <input type="text" id="baseInput" placeholder="未設定なら ../動画/ （隣の動画フォルダ）を参照">
+    <p class="hint">
+      ・<b>このPC（Dropbox）でローカル視聴</b>：未設定のままでOK。<code>動画</code> フォルダのMP4を自動参照します。<br>
+      ・<b>スマホ等のオンライン視聴</b>：Dropbox等に動画を置き、そのフォルダの直リンクを入れてください。末尾は <code>/</code> 推奨。ファイル名は自動で付加されます。<br>
+      ・Dropboxリンクは <code>www.dropbox.com</code>／末尾 <code>?dl=0</code> でも、自動でダウンロード用URLに変換します。
+    </p>
+    <div class="mrow">
+      <button class="btn" onclick="saveSettings()">保存</button>
+      <button class="btn sec" onclick="closeSettings()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 講義データ（出典: 高血圧動画.pdf / jsh-specialist.org Web講座） =====
+const LECTURES = [
+  {n:1, file:"講義01_高血圧の疫学.mp4", title:"高血圧の疫学", lecturer:"有馬　久富",
+   topics:["国民の血圧水準の推移","高血圧による脳卒中と心疾患の発症","日本人高血圧の特徴","降圧治療に係わる医療経済の問題","公衆衛生上の高血圧対策"]},
+  {n:2, file:"講義02_血圧調節機序.mp4", title:"血圧調節機序", lecturer:"廣岡　良隆",
+   topics:["遺伝要因","環境要因","レニン・アンジオテンシン・アルドステロン系","交感神経系","腎臓と食塩","血管機序","心臓"]},
+  {n:3, file:"講義03_血圧測定.mp4", title:"血圧測定", lecturer:"大久保　孝義",
+   topics:["診察室血圧","家庭血圧","24時間自由行動下血圧測定（ABPM）","血圧計の精度管理","上肢血圧測定（聴診法・自動血圧計）","下肢血圧測定（触診法・聴診法・自動血圧計）"]},
+  {n:4, file:"講義04_臨床評価.mp4", title:"臨床評価", lecturer:"土肥　靖明",
+   topics:["リスクファクターの評価","高血圧性臓器障害の評価","合併症の評価","リスクの層別化","治療・管理計画の立案"]},
+  {n:5, file:"講義05_検査診察.mp4", title:"検査、診察", lecturer:"下澤　達雄",
+   topics:["心電図","精密眼底検査または眼底写真","頸部血管エコー検査","心エコー検査","腎エコー","四肢動脈エコー検査","胸腹部CT・MRI検査","頭部CT・MRI検査","尿中蛋白／微量アルブミン排泄量","PWV・ABI・CAVI","腹部血管雑音の聴取","頸部血管雑音の聴取"]},
+  {n:6, file:"講義06_生活習慣の修正.mp4", title:"生活習慣の修正", lecturer:"荒川　仁香",
+   topics:["食事療法（減塩、DASH食、アルコール制限）","体重のコントロール","運動療法","禁煙指導"]},
+  {n:7, file:"講義07_降圧治療1.mp4", title:"降圧治療〈1〉", lecturer:"三浦　伸一郎 / 甲斐　久史",
+   topics:["白衣高血圧の評価と対応","仮面高血圧の評価と対応","個々の患者に適した降圧薬の選択","降圧目標を達成するために注意する病態やポイント","降圧薬の服薬指導"]},
+  {n:8, file:"講義08_降圧治療2.mp4", title:"降圧治療〈2〉", lecturer:"宗像　正徳",
+   topics:["降圧薬の特徴と主な副作用","降圧薬の副作用発現時の適切な対応","降圧薬の増量と併用","降圧薬の持続時間の評価と対応","降圧薬の減量と中止","早朝高血圧のコントロール","治療抵抗性の要因検索・対策実施"]},
+  {n:9, file:"講義09_脳血管障害.mp4", title:"脳血管障害", lecturer:"古賀　政利",
+   topics:["脳卒中急性期","脳卒中慢性期","無症候性脳血管障害","頸動脈狭窄・頭蓋内主幹動脈狭窄"]},
+  {n:10, file:"講義10_腎疾患.mp4", title:"腎疾患", lecturer:"有馬　秀二",
+   topics:["慢性腎臓病（CKD）","急性腎不全","糖尿病性腎症","慢性糸球体腎炎","腎実質高血圧"]},
+  {n:11, file:"講義11_心疾患血管疾患.mp4", title:"心疾患、血管疾患", lecturer:"山本　英一郎 / 金子　英弘",
+   topics:["急性左心不全および肺水腫","心肥大","慢性心不全","狭心症","急性冠症候群","陳旧性心筋梗塞","大動脈弁疾患","心房細動","胸部／腹部大動脈瘤","大動脈解離","大動脈炎症候群","大動脈縮窄症","閉塞性動脈硬化症"]},
+  {n:12, file:"講義12_他の疾患を合併する高血圧.mp4", title:"他の疾患を合併する高血圧", lecturer:"古橋　眞人",
+   topics:["糖尿病","脂質異常症","メタボリックシンドローム","睡眠ポリグラフィー、睡眠時無呼吸症候群","気管支喘息および慢性閉塞性肺疾患","痛風・高尿酸血症","肝疾患"]},
+  {n:13, file:"講義13_高齢者高血圧低血圧と教育.mp4", title:"高齢者高血圧、低血圧、患者・市民・チーム医療メンバーの教育", lecturer:"山本　浩一 / 樺山　舞",
+   topics:["高齢者高血圧","ポリファーマシー対策の実践","認知症","フレイル、要介護","低血圧または起立性調節障害","高血圧・循環器疾患予防に関する患者集団教育","高血圧・循環器疾患予防に関する市民啓発活動","チーム医療メンバーへの教育"]},
+  {n:14, file:"講義14_特殊条件下の高血圧.mp4", title:"特殊条件下の高血圧", lecturer:"後藤　健一",
+   topics:["加速型-悪性高血圧","高血圧緊急症、切迫症","外科手術前後の血圧コントロール","高血圧緊急症以外の一過性血圧上昇"]},
+  {n:15, file:"講義15_女性小児の高血圧.mp4", title:"女性・小児の高血圧", lecturer:"三戸　麻子",
+   topics:["妊娠高血圧症候群と高血圧合併妊娠","小児の高血圧","産後、閉経後なども含めた女性の高血圧"]},
+  {n:16, file:"講義16_二次性高血圧_概論遺伝性.mp4", title:"二次性高血圧〈概論/遺伝性高血圧〉", lecturer:"市原　淳弘",
+   topics:["概論","腹部エコー検査（副腎・腎臓）","各種ホルモン検査","各種核医学検査"]},
+  {n:17, file:"講義17_二次性高血圧_内分泌性.mp4", title:"二次性高血圧〈内分泌性高血圧〉", lecturer:"向山　政志 / 柴田　洋孝",
+   topics:["原発性アルドステロン症","クッシング症候群","褐色細胞腫","甲状腺機能亢進症","甲状腺機能低下症","副甲状腺機能亢進症","先端巨大症"]},
+  {n:18, file:"講義18_二次性高血圧_腎血管性血管性薬剤性.mp4", title:"二次性高血圧〈腎血管性高血圧/血管性高血圧/薬剤性高血圧〉", lecturer:"岩嶋　義雄 / 八田　告",
+   topics:["腎血管性高血圧","腎動脈造影・分腎静脈サンプリング検査","血管性高血圧","脳・中枢神経疾患による高血圧","薬剤誘発性高血圧、健康食品による高血圧"]},
+];
+
+// ===== 状態（localStorage） =====
+const PROG_KEY = "ht-video-progress";   // {n: {pos, dur, done}}
+const BASE_KEY = "ht-video-base";        // 動画ベースURL/パス
+const THEME_KEY = "ht-video-theme";
+let prog = load(PROG_KEY, {});
+let curN = null;
+
+function load(k, def){ try{ return JSON.parse(localStorage.getItem(k)) ?? def; }catch(e){ return def; } }
+function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+// ===== 動画URLの解決 =====
+const DEFAULT_BASE = "../動画/";     // ローカル時: output/動画.html → 隣の 動画 フォルダ
+function getBase(){
+  let b = localStorage.getItem(BASE_KEY);
+  if(b === null) b = DEFAULT_BASE;   // 未設定=ローカルの動画フォルダ相対
+  return b;
+}
+function srcFor(lec){
+  let base = getBase().trim();
+  const enc = encodeURIComponent(lec.file);
+  if(base === "") return enc;        // 明示的に空欄=同フォルダ
+  if(!base.endsWith("/")) base += "/";
+  let url = base + enc;
+  if(/dropbox\.com/.test(url)){
+    url = url.replace("www.dropbox.com","dl.dropboxusercontent.com")
+             .replace(/\?dl=0/,"").replace(/\?dl=1/,"");
+  }
+  return url;
+}
+
+// ===== 描画 =====
+const listEl = document.getElementById('list');
+const video = document.getElementById('video');
+
+function stats(){
+  let done=0; LECTURES.forEach(l=>{ if(prog[l.n] && prog[l.n].done) done++; });
+  return {done, total:LECTURES.length};
+}
+
+function renderList(){
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const items = LECTURES.filter(l=>{
+    if(!q) return true;
+    return (l.title+l.lecturer+l.topics.join("")).toLowerCase().includes(q);
+  });
+  listEl.innerHTML = items.map(l=>{
+    const p = prog[l.n] || {};
+    const pct = p.dur ? Math.min(100, (p.pos||0)/p.dur*100) : (p.done?100:0);
+    const resume = (p.pos && p.dur && !p.done && p.pos>5)
+      ? `<div class="resume-note">▶ 続きから ${fmt(p.pos)} / ${fmt(p.dur)}</div>` : "";
+    return `<div class="lec ${p.done?'done':''} ${l.n===curN?'playing':''}" id="lec${l.n}">
+      <div class="lec-head">
+        <span class="lec-no">講義${l.n}</span>
+        <div class="lec-main">
+          <div class="lec-title">${esc(l.title)}</div>
+          <div class="lec-lect">講師：${esc(l.lecturer)}</div>
+        </div>
+        <div class="lec-actions">
+          <label class="chk"><input type="checkbox" ${p.done?'checked':''}
+            onchange="toggleDone(${l.n}, this.checked)">受講済</label>
+          <button class="btn" onclick="play(${l.n})">▶ 再生</button>
+        </div>
+      </div>
+      <ul class="topics">${l.topics.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
+      ${resume}
+      <div class="prog"><span style="width:${pct}%"></span></div>
+    </div>`;
+  }).join("");
+  const s = stats();
+  document.getElementById('summary').textContent =
+    `受講済 ${s.done} / ${s.total} 講義` + (q?`（"${q}" で${items.length}件）`:"");
+}
+
+function play(n){
+  const lec = LECTURES.find(l=>l.n===n);
+  if(!lec) return;
+  curN = n;
+  document.getElementById('pNo').textContent = "講義"+n;
+  document.getElementById('pTitle').textContent = lec.title;
+  document.getElementById('pErr').classList.remove('show');
+  document.getElementById('playerWrap').classList.add('active');
+  video.src = srcFor(lec);
+  video.load();
+  const p = prog[n];
+  video.onloadedmetadata = ()=>{
+    if(p && p.pos && p.pos>5 && (!p.done)){ try{ video.currentTime = p.pos; }catch(e){} }
+  };
+  video.play().catch(()=>{});
+  renderList();
+  document.getElementById('lec'+n)?.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+video.addEventListener('timeupdate', ()=>{
+  if(curN==null || !video.duration) return;
+  const p = prog[curN] || {};
+  p.pos = video.currentTime; p.dur = video.duration;
+  if(video.currentTime/video.duration > 0.95) p.done = true;
+  prog[curN] = p; save(PROG_KEY, prog);
+});
+video.addEventListener('ended', ()=>{
+  if(curN==null) return;
+  prog[curN] = Object.assign(prog[curN]||{}, {done:true, pos:0});
+  save(PROG_KEY, prog); renderList();
+});
+video.addEventListener('error', ()=>{
+  if(curN==null) return;
+  const base = getBase();
+  const e = document.getElementById('pErr');
+  e.innerHTML = `⚠️ 動画を読み込めませんでした。`
+    + (base===""
+        ? `このページを <code>動画</code> フォルダ内（MP4と同じ場所）から開くか、<b>⚙️</b> で動画の置き場所（Dropboxの共有リンク等）を設定してください。`
+        : `設定中のベース：<code>${esc(base)}</code><br>URLが正しいか、直リンク（ダウンロード可能なURL）かをご確認ください。`)
+    + ` <button class="iconbtn" onclick="openSettings()">⚙️ 設定</button>`;
+  e.classList.add('show');
+});
+
+function toggleDone(n, v){
+  prog[n] = Object.assign(prog[n]||{}, {done:v});
+  if(v && (!prog[n].pos)) prog[n].pos = 0;
+  save(PROG_KEY, prog); renderList();
+}
+function closePlayer(){
+  video.pause(); document.getElementById('playerWrap').classList.remove('active');
+  curN = null; renderList();
+}
+
+// ===== 設定 =====
+function openSettings(){
+  document.getElementById('baseInput').value = localStorage.getItem(BASE_KEY) || "";
+  document.getElementById('settingsModal').classList.add('show');
+}
+function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
+function saveSettings(){
+  const v = document.getElementById('baseInput').value.trim();
+  localStorage.setItem(BASE_KEY, v);
+  closeSettings();
+  if(curN!=null) play(curN); else renderList();
+}
+
+// ===== 共通 =====
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(sec){ sec=Math.floor(sec||0); const m=Math.floor(sec/60), s=sec%60; return m+":"+String(s).padStart(2,'0'); }
+function goApp(){ location.href = "index.html"; }
+function toggleTheme(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem(THEME_KEY, document.body.classList.contains('dark')?'dark':'light');
+}
+if(localStorage.getItem(THEME_KEY)==='dark') document.body.classList.add('dark');
+document.getElementById('introStat').textContent =
+  `全${LECTURES.length}講義 ・ 視聴の続き／受講済みはこの端末に自動保存されます。`;
+renderList();
+</script>
+</body>
+</html>
