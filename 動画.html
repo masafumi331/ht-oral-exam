@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
 <title>動画講義 | 高血圧専門医試験 対策アプリ</title>
 <style>
 :root{
@@ -124,18 +125,35 @@ code{background:var(--bg); padding:1px 5px; border-radius:4px; font-size:12px}
 
 <div class="modal" id="settingsModal">
   <div class="mbody">
-    <h3>⚙️ 動画ソースの設定</h3>
-    <p class="hint">動画ファイル本体は容量が大きいためサイトには含まれていません。動画の置き場所（ベースURL／パス）を指定してください。設定はこの端末のブラウザに保存されます。</p>
-    <label>動画フォルダのベースURL／パス</label>
-    <input type="text" id="baseInput" placeholder="未設定なら ../動画/ （隣の動画フォルダ）を参照">
-    <p class="hint">
-      ・<b>このPC（Dropbox）でローカル視聴</b>：未設定のままでOK。<code>動画</code> フォルダのMP4を自動参照します。<br>
-      ・<b>スマホ等のオンライン視聴</b>：Dropbox等に動画を置き、そのフォルダの直リンクを入れてください。末尾は <code>/</code> 推奨。ファイル名は自動で付加されます。<br>
-      ・Dropboxリンクは <code>www.dropbox.com</code>／末尾 <code>?dl=0</code> でも、自動でダウンロード用URLに変換します。
-    </p>
-    <div class="mrow">
-      <button class="btn" onclick="saveSettings()">保存</button>
-      <button class="btn sec" onclick="closeSettings()">閉じる</button>
+    <h3>⚙️ 動画リンクの設定</h3>
+    <p class="hint">動画ファイル本体は容量・非公開のためサイトに含めていません。<b>外出先やiPadで見るには、各講義にDropbox等の共有リンクを登録</b>してください。登録はこの端末のブラウザにのみ保存され、他人に公開されません。</p>
+
+    <h4 style="margin:14px 0 4px; font-size:15px">① リンクを一括登録 <span id="linkStat" style="font-weight:normal; color:var(--muted); font-size:13px"></span></h4>
+    <p class="hint">講義1〜18の順に<b>1行ずつ</b>共有リンクを貼り付け（空行はスキップ）。各カードの「🔗登録」で個別に登録/変更もできます。Dropboxの <code>?dl=0</code> のままでOK（自動で再生用URLに変換）。</p>
+    <textarea id="bulkInput" rows="6" style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg); color:var(--fg); font-size:12px; font-family:monospace" placeholder="1行目=講義1のリンク&#10;2行目=講義2のリンク&#10;…&#10;18行目=講義18のリンク"></textarea>
+    <div class="mrow" style="margin-top:8px">
+      <button class="btn" onclick="saveBulkLinks()">一括登録</button>
+      <button class="btn sec" onclick="clearLinks()">全リンク削除</button>
+    </div>
+
+    <h4 style="margin:18px 0 4px; font-size:15px">② 端末間コピー（PC→iPad）</h4>
+    <p class="hint">PCで登録後「書き出し」→出たコードをiPadに送り、iPadの同じ画面で貼り付けて「読み込み」。18本の再入力が不要になります。</p>
+    <textarea id="cfgIO" rows="2" style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg); color:var(--fg); font-size:11px; font-family:monospace" placeholder="ここに設定コードが出ます／読み込み時はここに貼り付け"></textarea>
+    <div class="mrow" style="margin-top:8px">
+      <button class="btn sec" onclick="exportCfg()">⬆️ 書き出し</button>
+      <button class="btn sec" onclick="importCfg()">⬇️ 読み込み</button>
+    </div>
+
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer; color:var(--muted); font-size:14px">詳細設定（ベースURL方式）</summary>
+      <label>動画フォルダのベースURL／パス</label>
+      <input type="text" id="baseInput" placeholder="未設定なら ../動画/（PCローカルの動画フォルダ）">
+      <p class="hint">個別リンク未登録の講義に適用。Webサーバのように「フォルダ＋ファイル名」で配信できる場所がある場合のみ有効（Dropboxは個別リンク方式を使用）。</p>
+      <button class="btn sec" onclick="saveSettings()">ベースURLを保存</button>
+    </details>
+
+    <div class="mrow" style="margin-top:18px">
+      <button class="btn" onclick="closeSettings()">閉じる</button>
     </div>
   </div>
 </div>
@@ -184,14 +202,30 @@ const LECTURES = [
 // ===== 状態（localStorage） =====
 const PROG_KEY = "ht-video-progress";   // {n: {pos, dur, done}}
 const BASE_KEY = "ht-video-base";        // 動画ベースURL/パス
+const LINKS_KEY = "ht-video-links";      // {n: url}  各講義の直リンク（端末ローカル保存）
 const THEME_KEY = "ht-video-theme";
 let prog = load(PROG_KEY, {});
+let links = load(LINKS_KEY, {});
 let curN = null;
 
 function load(k, def){ try{ return JSON.parse(localStorage.getItem(k)) ?? def; }catch(e){ return def; } }
 function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 
+// ===== Dropbox等の共有リンク → ストリーミング用直URLに変換 =====
+function toDirect(u){
+  u = (u||"").trim();
+  if(!u) return u;
+  if(/dropbox\.com/.test(u)){
+    u = u.replace("www.dropbox.com","dl.dropboxusercontent.com")
+         .replace("//dropbox.com","//dl.dropboxusercontent.com");
+    if(/[?&]dl=0(\b|&|$)/.test(u))      u = u.replace(/([?&])dl=0/,"$1dl=1");
+    else if(!/[?&]dl=1(\b|&|$)/.test(u)) u += (u.includes("?")?"&":"?") + "dl=1";
+  }
+  return u;
+}
+
 // ===== 動画URLの解決 =====
+// 優先順位: ①各講義に登録した直リンク → ②ベースURL+ファイル名 → ③同フォルダ相対(ローカル)
 const DEFAULT_BASE = "../動画/";     // ローカル時: output/動画.html → 隣の 動画 フォルダ
 function getBase(){
   let b = localStorage.getItem(BASE_KEY);
@@ -199,17 +233,14 @@ function getBase(){
   return b;
 }
 function srcFor(lec){
+  if(links[lec.n]) return toDirect(links[lec.n]);   // ① 個別直リンク
   let base = getBase().trim();
   const enc = encodeURIComponent(lec.file);
-  if(base === "") return enc;        // 明示的に空欄=同フォルダ
+  if(base === "") return enc;        // ③ 同フォルダ
   if(!base.endsWith("/")) base += "/";
-  let url = base + enc;
-  if(/dropbox\.com/.test(url)){
-    url = url.replace("www.dropbox.com","dl.dropboxusercontent.com")
-             .replace(/\?dl=0/,"").replace(/\?dl=1/,"");
-  }
-  return url;
+  return toDirect(base + enc);       // ② ベースURL方式
 }
+function linkCount(){ return LECTURES.filter(l=>links[l.n]).length; }
 
 // ===== 描画 =====
 const listEl = document.getElementById('list');
@@ -231,16 +262,18 @@ function renderList(){
     const pct = p.dur ? Math.min(100, (p.pos||0)/p.dur*100) : (p.done?100:0);
     const resume = (p.pos && p.dur && !p.done && p.pos>5)
       ? `<div class="resume-note">▶ 続きから ${fmt(p.pos)} / ${fmt(p.dur)}</div>` : "";
+    const linked = !!links[l.n];
     return `<div class="lec ${p.done?'done':''} ${l.n===curN?'playing':''}" id="lec${l.n}">
       <div class="lec-head">
         <span class="lec-no">講義${l.n}</span>
         <div class="lec-main">
-          <div class="lec-title">${esc(l.title)}</div>
+          <div class="lec-title">${esc(l.title)} ${linked?'<span class="linkbadge" title="リンク登録済み">🔗</span>':''}</div>
           <div class="lec-lect">講師：${esc(l.lecturer)}</div>
         </div>
         <div class="lec-actions">
           <label class="chk"><input type="checkbox" ${p.done?'checked':''}
             onchange="toggleDone(${l.n}, this.checked)">受講済</label>
+          <button class="btn sec" title="${linked?'リンクを変更':'Dropbox等の直リンクを登録'}" onclick="setLink(${l.n})">${linked?'🔗変更':'🔗登録'}</button>
           <button class="btn" onclick="play(${l.n})">▶ 再生</button>
         </div>
       </div>
@@ -250,8 +283,9 @@ function renderList(){
     </div>`;
   }).join("");
   const s = stats();
+  const lc = linkCount();
   document.getElementById('summary').textContent =
-    `受講済 ${s.done} / ${s.total} 講義` + (q?`（"${q}" で${items.length}件）`:"");
+    `受講済 ${s.done} / ${s.total} 講義　|　リンク登録 ${lc} / ${s.total}` + (q?`（"${q}" で${items.length}件）`:"");
 }
 
 function play(n){
@@ -287,13 +321,13 @@ video.addEventListener('ended', ()=>{
 });
 video.addEventListener('error', ()=>{
   if(curN==null) return;
-  const base = getBase();
   const e = document.getElementById('pErr');
+  const hasLink = !!links[curN];
   e.innerHTML = `⚠️ 動画を読み込めませんでした。`
-    + (base===""
-        ? `このページを <code>動画</code> フォルダ内（MP4と同じ場所）から開くか、<b>⚙️</b> で動画の置き場所（Dropboxの共有リンク等）を設定してください。`
-        : `設定中のベース：<code>${esc(base)}</code><br>URLが正しいか、直リンク（ダウンロード可能なURL）かをご確認ください。`)
-    + ` <button class="iconbtn" onclick="openSettings()">⚙️ 設定</button>`;
+    + (hasLink
+        ? `登録リンクが正しいか（Dropbox共有リンク等の直リンク）をご確認ください。`
+        : `外出先・iPad等で見るには、この講義に <b>🔗登録</b> でDropboxの共有リンクを登録してください。<br>（PCでローカルのMP4を見る場合は <code>動画</code> フォルダ内のページから開いてください）`)
+    + ` <button class="iconbtn" onclick="setLink(${curN})">🔗 この講義のリンクを登録</button>`;
   e.classList.add('show');
 });
 
@@ -307,11 +341,66 @@ function closePlayer(){
   curN = null; renderList();
 }
 
-// ===== 設定 =====
-function openSettings(){
-  document.getElementById('baseInput').value = localStorage.getItem(BASE_KEY) || "";
-  document.getElementById('settingsModal').classList.add('show');
+// ===== リンク登録 =====
+function setLink(n){
+  const lec = LECTURES.find(l=>l.n===n);
+  const cur = links[n] || "";
+  const v = prompt(`講義${n}「${lec.title}」の動画リンクを貼り付け\n（DropboxやOneDrive等の共有リンク。dl=0のままでOK）\n空にすると登録解除：`, cur);
+  if(v === null) return;            // キャンセル
+  const t = v.trim();
+  if(t === "") delete links[n]; else links[n] = t;
+  save(LINKS_KEY, links);
+  renderList();
+  if(curN===n && t!=="") play(n);
 }
+function saveBulkLinks(){
+  const txt = document.getElementById('bulkInput').value;
+  const lines = txt.split(/\r?\n/);
+  let cnt = 0;
+  for(let i=0; i<LECTURES.length; i++){
+    const line = (lines[i]||"").trim();
+    const n = LECTURES[i].n;
+    if(line){ links[n] = line; cnt++; }
+  }
+  save(LINKS_KEY, links);
+  renderList();
+  alert(`${cnt} 件のリンクを登録しました。`);
+  refreshSettings();
+}
+function clearLinks(){
+  if(!confirm("登録した全リンクを削除しますか？（受講記録は消えません）")) return;
+  links = {}; save(LINKS_KEY, links); renderList(); refreshSettings();
+}
+// 設定の書き出し/読み込み（端末間コピー用）
+function exportCfg(){
+  const payload = JSON.stringify({v:1, base: localStorage.getItem(BASE_KEY)||"", links});
+  const code = btoa(unescape(encodeURIComponent(payload)));
+  const ta = document.getElementById('cfgIO'); ta.value = code; ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  alert("設定コードを書き出しました（クリップボードにコピー済み）。\niPad等の同じページの設定→「読み込み」に貼り付けてください。");
+}
+function importCfg(){
+  const code = document.getElementById('cfgIO').value.trim();
+  if(!code){ alert("設定コードを貼り付けてください。"); return; }
+  try{
+    const payload = decodeURIComponent(escape(atob(code)));
+    const obj = JSON.parse(payload);
+    if(obj.links){ links = obj.links; save(LINKS_KEY, links); }
+    if(typeof obj.base === "string"){ localStorage.setItem(BASE_KEY, obj.base); }
+    renderList(); refreshSettings();
+    alert(`読み込みました（リンク ${linkCount()} 件）。`);
+  }catch(e){ alert("コードを読み取れませんでした。コピーし直してください。"); }
+}
+
+// ===== 設定 =====
+function refreshSettings(){
+  document.getElementById('baseInput').value = localStorage.getItem(BASE_KEY) || "";
+  // 一括欄に現在の登録を講義順で表示
+  document.getElementById('bulkInput').value =
+    LECTURES.map(l=> links[l.n] || "").join("\n");
+  document.getElementById('linkStat').textContent = `現在 ${linkCount()} / ${LECTURES.length} 件 登録済み`;
+}
+function openSettings(){ refreshSettings(); document.getElementById('settingsModal').classList.add('show'); }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
 function saveSettings(){
   const v = document.getElementById('baseInput').value.trim();
